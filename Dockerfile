@@ -1,106 +1,171 @@
-ARG PHP_VERSION
+ARG PHP_VERSION=8.2
 ARG FROM_IMAGE=php:${PHP_VERSION}-cli
 
 FROM ${FROM_IMAGE} as build-qa-tools
 
-RUN set -xe; \
-    apt-get update && apt-get install -y \
-        git \
-        unzip \
-        libzip-dev \
-    && docker-php-ext-install -j$(nproc) \
-		zip
+ARG WITH_COMPOSER_DEPS=""
 
-COPY --from=composer /usr/bin/composer /usr/bin/composer
+RUN if [ -n "${WITH_COMPOSER_DEPS}" ]; then \
+        set -xe; \
+        apt-get update && apt-get install -y \
+            git \
+            unzip \
+            libzip-dev \
+        && docker-php-ext-install -j$(nproc) \
+            zip; \
+    fi
+
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
-ENV COMPOSER_HOME /usr/local/composer
+ENV COMPOSER_HOME=/usr/local/composer
+ENV QA_DEPS_DIR=/usr/local/src
+
+# Default QA tools versions
+ARG COMPOSER_UNUSED_VERSION=^0.8
+ARG PARALLEL_LINT_VERSION=^1
+ARG PDEPEND_VERSION=^2
+ARG PHAN_VERSION=^5
+ARG PHP_CS_FIXER_VERSION=^3
+ARG PHP_CODESNIFFER_VERSION=^3
+ARG PHP_DEPRECATION_DETECTOR_VERSION=^2
+ARG PHP_INSIGHTS_VERSION=^2
+ARG PHP_LOC_VERSION=^7
+ARG PHP_MD_VERSION=^2
+ARG PHP_METRICS_VERSION=^2
+ARG PHP_MND_VERSION=^2
+ARG PHPSTAN_VERSION=^1
+ARG TWIG_CS_VERSION=^6
+ARG YAML_LINTER_VERSION=^6
+
+# Allow custom extensions
+ARG PHP_CS_FIXER_EXTENSIONS=""
+ARG PHP_CODESNIFFER_EXTENSIONS=""
+ARG PHPSTAN_EXTENSIONS=""
 
 RUN set -xe; \
-    mkdir -p /usr/local/src; \
-    cd /usr/local/src; \
-    composer init --name=${COMPOSE_PROJECT_NAME:-local}/php-qa-tools --no-interaction; \
-    composer config allow-plugins.bamarni/composer-bin-plugin true; \
-    composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true; \
-    composer require --optimize-autoloader \
-        bamarni/composer-bin-plugin; \
-    composer bin composer-unused require --optimize-autoloader \
-        icanhazstring/composer-unused; \
-    composer bin php-parallel-lint require --optimize-autoloader \
-        php-parallel-lint/php-parallel-lint; \
-    composer bin phpcpd require --optimize-autoloader \
-        sebastian/phpcpd; \
-    composer bin phpdepend require --optimize-autoloader \
-        pdepend/pdepend; \
-    composer bin phan require --optimize-autoloader \
-        phan/phan; \
-    composer bin php-cs-fixer require --optimize-autoloader \
-        friendsofphp/php-cs-fixer; \
-    composer bin php_codesniffer require --optimize-autoloader \
-        squizlabs/php_codesniffer; \
-    composer bin php-deprecation-detector require --optimize-autoloader \
-        wapmorgan/php-deprecation-detector; \
-    composer bin phpinsights require --optimize-autoloader \
-        nunomaduro/phpinsights; \
-    composer bin phploc require --optimize-autoloader \
-        phploc/phploc; \
-    composer bin phpmd require --optimize-autoloader \
-        phpmd/phpmd; \
-    composer bin phpmetrics require --optimize-autoloader \
-        phpmetrics/phpmetrics; \
-    composer bin phpmnd require --optimize-autoloader \
-        povils/phpmnd; \
-    composer bin phpstan require --optimize-autoloader \
-        phpstan/phpstan \
-        phpstan/phpstan-dibi \
-        phpstan/phpstan-doctrine \
-        phpstan/phpstan-phpunit \
-        phpstan/phpstan-beberlei-assert \
-        phpstan/phpstan-strict-rules; \
-    composer bin twigcs require --optimize-autoloader \
-        friendsoftwig/twigcs; \
-    composer bin yaml-linter require --optimize-autoloader \
-        symfony/console \
-        symfony/yaml
+    mkdir -p ${QA_DEPS_DIR}; \
+    cd ${QA_DEPS_DIR}; \
+    composer init --name=${COMPOSE_PROJECT_NAME:-alximy}/php-qa-tools --no-interaction; \
+    composer config --global allow-plugins.bamarni/composer-bin-plugin true; \
+    composer config --global allow-plugins.dealerdirect/phpcodesniffer-composer-installer true; \
+    composer config --global allow-plugins.phpstan/extension-installer true
+
+WORKDIR $QA_DEPS_DIR
+
+RUN composer require --optimize-autoloader \
+        bamarni/composer-bin-plugin
+
+RUN composer bin composer-unused require --dev --optimize-autoloader \
+        icanhazstring/composer-unused:$COMPOSER_UNUSED_VERSION
+
+RUN composer bin php-parallel-lint require --dev --optimize-autoloader \
+        php-parallel-lint/php-parallel-lint:$PARALLEL_LINT_VERSION
+
+RUN composer bin phpdepend require --dev --optimize-autoloader \
+        pdepend/pdepend:$PDEPEND_VERSION
+
+RUN composer bin phan require --dev --optimize-autoloader \
+        phan/phan:$PHAN_VERSION
+
+RUN composer bin php-cs-fixer require --dev --optimize-autoloader \
+        friendsofphp/php-cs-fixer:$PHP_CS_FIXER_VERSION \
+        kubawerlos/php-cs-fixer-custom-fixers:* \
+        $PHP_CS_FIXER_EXTENSIONS
+
+RUN composer bin php_codesniffer require --dev --optimize-autoloader \
+        squizlabs/php_codesniffer:$PHP_CODESNIFFER_VERSION \
+        $PHP_CODESNIFFER_EXTENSIONS
+
+RUN composer bin php-deprecation-detector require --dev --optimize-autoloader \
+        wapmorgan/php-deprecation-detector:$PHP_DEPRECATION_DETECTOR_VERSION
+
+RUN composer bin phpinsights require --dev --optimize-autoloader \
+        nunomaduro/phpinsights:$PHP_INSIGHTS_VERSION
+
+RUN composer bin phploc require --dev --optimize-autoloader \
+        phploc/phploc:$PHP_LOC_VERSION
+
+RUN composer bin phpmd require --dev --optimize-autoloader \
+        phpmd/phpmd:$PHP_MD_VERSION
+
+RUN composer bin phpmetrics require --dev --optimize-autoloader \
+        phpmetrics/phpmetrics:$PHP_METRICS_VERSION
+
+RUN composer bin phpmnd require --dev --optimize-autoloader \
+        povils/phpmnd:$PHP_MND_VERSION
+
+RUN composer bin phpstan require --dev --optimize-autoloader \
+        phpstan/phpstan:$PHPSTAN_VERSION \
+        phpstan/extension-installer:* \
+        phpstan/phpstan-deprecation-rules:* \
+        phpstan/phpstan-dibi:* \
+        phpstan/phpstan-doctrine:* \
+        phpstan/phpstan-phpunit:* \
+        phpstan/phpstan-beberlei-assert:* \
+        phpstan/phpstan-strict-rules:* \
+        phpstan/phpstan-symfony:* \
+        $PHPSTAN_EXTENSIONS
+
+RUN composer bin twigcs require --dev --optimize-autoloader \
+        friendsoftwig/twigcs:$TWIG_CS_VERSION
+
+RUN composer bin yaml-linter require --dev --optimize-autoloader \
+        symfony/console:$YAML_LINTER_VERSION \
+        symfony/yaml:$YAML_LINTER_VERSION
 
 FROM ${FROM_IMAGE} as build-su-exec
 
 RUN set -ex; \
     curl -o /usr/local/bin/su-exec.c https://raw.githubusercontent.com/ncopa/su-exec/master/su-exec.c; \
-    fetch_deps='gcc libc-dev'; \
-    apt-get update && apt-get install -y --no-install-recommends $fetch_deps; \
+    apt-get update && apt-get install -y --no-install-recommends gcc libc-dev; \
     gcc -Wall \
         /usr/local/bin/su-exec.c -o/usr/local/bin/su-exec; \
     chown root:root /usr/local/bin/su-exec; \
     chmod 0755 /usr/local/bin/su-exec
 
-FROM ${FROM_IMAGE}
+FROM ${FROM_IMAGE} as wrap-php
 
-RUN pecl install xdebug \
-    && docker-php-ext-enable xdebug \
-    && echo "xdebug.mode=debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
-    && echo "xdebug.client_host = host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+ARG ENABLE_XDEBUG=""
+ARG WITH_XDEBUG=""
+ARG WITH_AST=""
 
-RUN pecl install ast \
-    && docker-php-ext-enable ast
+RUN if [ -n "${WITH_XDEBUG}" ]; then \
+        pecl install xdebug \
+        && echo "xdebug.mode=debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+        && echo "xdebug.client_host = host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini; \
+        if [ -n "${ENABLE_XDEBUG}" ]; then \
+            docker-php-ext-enable xdebug; \
+        fi \
+    fi
+
+RUN if [ -n "${WITH_AST}" ]; then \
+        pecl install ast \
+        && docker-php-ext-enable ast; \
+    fi
 
 RUN set -xe; \
-    echo 'memory_limit=-1' >> /usr/local/etc/php/conf.d/docker-php-memlimit.ini; \
     apt-get update && apt-get install -y \
         bash \
+        bash-completion \
         graphviz
 
-COPY --from=build-qa-tools /usr/bin/composer /usr/local/bin/composer
+COPY --from=build-qa-tools /usr/local/bin/composer /usr/local/bin/composer
 COPY --from=build-qa-tools /usr/local/src /usr/local/src
 COPY --from=build-su-exec /usr/local/bin/su-exec /usr/local/bin/
 
 ENV PATH /usr/local/src/vendor/bin:$PATH
+ENV QA_VENDOR_PATH /usr/local/src/vendor-bin
 
 RUN set -ex; \
-    addgroup bar; \
-    adduser foo --ingroup bar --no-create-home; \
-    chown -R foo:bar /usr/local/bin/composer; \
-    chown -R foo:bar /usr/local/src/vendor/bin
+    addgroup php-qa-tools; \
+    adduser php-qa-tools --ingroup php-qa-tools --no-create-home; \
+    chown -R php-qa-tools:php-qa-tools /usr/local/bin/composer; \
+    chown -R php-qa-tools:php-qa-tools /usr/local/src/vendor/bin
 
 COPY entrypoint.sh /usr/local/bin/
 ENTRYPOINT ["entrypoint.sh"]
+
+LABEL com.alximy.version=1.0
+LABEL com.alximy.release-date="2023-08-25"
+LABEL com.alximy.author="jules.pietri@alximy.io"
