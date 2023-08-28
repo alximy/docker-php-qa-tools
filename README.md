@@ -26,6 +26,12 @@ You can also install XDebug (not enabled) and AST PHP extensions.
 
 ## Usage
 
+### Tags
+
+There are two mains tags to pull the image:
+- ``amd64``: used for linux based OS (i.e. usually required for CI runners)
+- ``arm64``: optimized for Macs with Apple Silicon chip
+
 ### With Docker
 
 It uses the `PHP CLI` official image.
@@ -33,7 +39,7 @@ It uses the `PHP CLI` official image.
 The first optional ARG is `PHP_VERSION` (default to 8.2):
 
 ```bash
-docker build alximy:php-qa-tools --tag my-project-qa --build-arg WITH_COMPOSER_DEPS=1 \
+docker build alximy/php-qa-tools:amd64 --tag my-project-qa --build-arg WITH_COMPOSER_DEPS=1 \
     --build-arg PHP_VERSION=8.0 \
     --build-arg PHP_CS_FIXER_VERSION=^2 \
     --build-arg PHPSTAN_VERSION=^0
@@ -62,7 +68,7 @@ services:
 
     qa:
         container_name: ${COMPOSE_PROJECT_NAME}_qa
-        image: alximy:php-qa-tools
+        image: alximy/php-qa-tools:amd64
         build:
             args:
                 PHP_VERSION: 8.0
