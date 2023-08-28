@@ -47,7 +47,8 @@ RUN set -xe; \
     mkdir -p ${QA_DEPS_DIR}; \
     cd ${QA_DEPS_DIR}; \
     composer init --name=${COMPOSE_PROJECT_NAME:-alximy}/php-qa-tools --no-interaction; \
-    composer config --global allow-plugins.bamarni/composer-bin-plugin true; \
+    composer config allow-plugins.bamarni/composer-bin-plugin true; \
+    composer config extra.bamarni-bin --json '{"bin-links":true, "forward-command":true}'; \
     composer config --global allow-plugins.dealerdirect/phpcodesniffer-composer-installer true; \
     composer config --global allow-plugins.phpstan/extension-installer true
 
