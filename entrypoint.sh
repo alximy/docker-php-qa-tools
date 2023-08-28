@@ -31,6 +31,9 @@ if [ $uid == 0 ] && [ $gid == 0 ]; then
   if [ $# -eq 0 ]; then
     usage
   else
+    # always update dependencies
+    composer --working-dir=/usr/local/src bin all update
+
     exec "$@"
   fi
 fi
@@ -42,7 +45,7 @@ if [ $# -eq 0 ]; then
   usage
 else
   # always update dependencies
-  composer update --working-dir=/usr/local/src
+  composer --working-dir=/usr/local/src bin all update
 
   user=`grep ":x:$uid:" /etc/passwd | cut -d: -f1`
   exec su-exec $user "$@"
