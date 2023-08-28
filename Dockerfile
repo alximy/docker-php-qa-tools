@@ -23,6 +23,7 @@ ENV QA_DEPS_DIR=/usr/local/src
 
 # Default QA tools versions
 ARG COMPOSER_UNUSED_VERSION=^0.8
+ARG JSONLINT_VERSION=^1
 ARG PARALLEL_LINT_VERSION=^1
 ARG PDEPEND_VERSION=^2
 ARG PHAN_VERSION=^5
@@ -60,10 +61,13 @@ RUN composer require --optimize-autoloader \
 RUN composer bin composer-unused require --dev --optimize-autoloader \
         icanhazstring/composer-unused:$COMPOSER_UNUSED_VERSION
 
-RUN composer bin php-parallel-lint require --dev --optimize-autoloader \
+RUN composer bin jsonlint require --dev --optimize-autoloader \
+        seld/jsonlint:$JSONLINT_VERSION
+
+RUN composer bin parallel-lint require --dev --optimize-autoloader \
         php-parallel-lint/php-parallel-lint:$PARALLEL_LINT_VERSION
 
-RUN composer bin phpdepend require --dev --optimize-autoloader \
+RUN composer bin pdepend require --dev --optimize-autoloader \
         pdepend/pdepend:$PDEPEND_VERSION
 
 RUN composer bin phan require --dev --optimize-autoloader \
@@ -74,11 +78,11 @@ RUN composer bin php-cs-fixer require --dev --optimize-autoloader \
         kubawerlos/php-cs-fixer-custom-fixers:* \
         $PHP_CS_FIXER_EXTENSIONS
 
-RUN composer bin php_codesniffer require --dev --optimize-autoloader \
+RUN composer bin phpcs require --dev --optimize-autoloader \
         squizlabs/php_codesniffer:$PHP_CODESNIFFER_VERSION \
         $PHP_CODESNIFFER_EXTENSIONS
 
-RUN composer bin php-deprecation-detector require --dev --optimize-autoloader \
+RUN composer bin phpdd require --dev --optimize-autoloader \
         wapmorgan/php-deprecation-detector:$PHP_DEPRECATION_DETECTOR_VERSION
 
 RUN composer bin phpinsights require --dev --optimize-autoloader \
@@ -111,7 +115,7 @@ RUN composer bin phpstan require --dev --optimize-autoloader \
 RUN composer bin twigcs require --dev --optimize-autoloader \
         friendsoftwig/twigcs:$TWIG_CS_VERSION
 
-RUN composer bin yaml-linter require --dev --optimize-autoloader \
+RUN composer bin yaml-lint require --dev --optimize-autoloader \
         symfony/console:$YAML_LINTER_VERSION \
         symfony/yaml:$YAML_LINTER_VERSION
 

@@ -31,8 +31,14 @@ if [ $uid == 0 ] && [ $gid == 0 ]; then
   if [ $# -eq 0 ]; then
     usage
   else
+    if [ -d "${QA_VENDOR_PATH}/$1" ]; then
+      export QA_TOOL="$1"
+    else
+      export QA_TOOL="all"
+    fi
+
     # always update dependencies
-    composer --working-dir=/usr/local/src bin all update
+    composer --working-dir=/usr/local/src bin "$QA_TOOL" update
 
     exec "$@"
   fi
@@ -44,8 +50,14 @@ sed -i -r "s/php-qa-tools:x:\d+:/php-qa-tools:x:$gid:/g" /etc/group
 if [ $# -eq 0 ]; then
   usage
 else
+  if [ -d "${QA_VENDOR_PATH}/$1" ]; then
+    export QA_TOOL="$1"
+  else
+    export QA_TOOL="all"
+  fi
+
   # always update dependencies
-  composer --working-dir=/usr/local/src bin all update
+  composer --working-dir=/usr/local/src bin "$QA_TOOL" update
 
   user=`grep ":x:$uid:" /etc/passwd | cut -d: -f1`
   exec su-exec $user "$@"
