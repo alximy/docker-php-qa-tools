@@ -44,9 +44,6 @@ if [ $uid == 0 ] && [ $gid == 0 ]; then
   fi
 fi
 
-sed -i -r "s/php-qa-tools:x:\d+:\d+:/php-qa-tools:x:$uid:$gid:/g" /etc/passwd
-sed -i -r "s/php-qa-tools:x:\d+:/php-qa-tools:x:$gid:/g" /etc/group
-
 if [ $# -eq 0 ]; then
   usage
 else
@@ -59,6 +56,5 @@ else
   # always update dependencies
   composer --working-dir=/usr/local/src bin "$QA_TOOL" update
 
-  user=`grep ":x:$uid:" /etc/passwd | cut -d: -f1`
-  exec su-exec $user "$@"
+  exec su-exec php-qa-tools "$@"
 fi
