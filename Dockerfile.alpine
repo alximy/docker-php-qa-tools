@@ -1,5 +1,5 @@
 ARG PHP_VERSION=8.2
-ARG FROM_IMAGE=php:${PHP_VERSION}-cli
+ARG FROM_IMAGE=php:${PHP_VERSION}-cli-alpine
 
 FROM ${FROM_IMAGE} as build-qa-tools
 
@@ -7,7 +7,7 @@ ARG WITH_COMPOSER_DEPS=""
 
 RUN if [ -n "${WITH_COMPOSER_DEPS}" ]; then \
         set -xe; \
-        apt-get update && apt-get install -y \
+        apk update && apk add \
             git \
             unzip \
             libzip-dev \
@@ -123,7 +123,7 @@ FROM ${FROM_IMAGE} as build-su-exec
 
 RUN set -ex; \
     curl -o /usr/local/bin/su-exec.c https://raw.githubusercontent.com/ncopa/su-exec/master/su-exec.c; \
-    apt-get update && apt-get install -y --no-install-recommends gcc libc-dev; \
+    apk add gcc libc-dev; \
     gcc -Wall \
         /usr/local/bin/su-exec.c -o/usr/local/bin/su-exec; \
     chown root:root /usr/local/bin/su-exec; \
@@ -150,7 +150,7 @@ RUN if [ -n "${WITH_AST}" ]; then \
     fi
 
 RUN set -xe; \
-    apt-get update && apt-get install -y \
+    apk add \
         bash \
         bash-completion \
         graphviz
@@ -162,8 +162,7 @@ COPY --from=build-su-exec /usr/local/bin/su-exec /usr/local/bin/
 ENV PATH /usr/local/src/vendor/bin:$PATH
 ENV QA_VENDOR_PATH /usr/local/src/vendor-bin
 
-RUN set -ex; \
-    addgroup php-qa-tools; \
+RUN addgroup php-qa-tools; \
     adduser php-qa-tools --ingroup php-qa-tools --no-create-home; \
     chown -R php-qa-tools:php-qa-tools /usr/local/bin/composer; \
     chown -R php-qa-tools:php-qa-tools /usr/local/src/vendor/bin
